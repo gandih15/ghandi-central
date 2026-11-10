@@ -1,0 +1,47 @@
+{
+  "name": "ghandi-central",
+  "productName": "Ghandi Central",
+  "version": "1.0.0",
+  "description": "غاندي — نظام إدارة السنترالات ومحلات الموبايل والصيانة",
+  "main": "main.js",
+  "author": "Eng. Mohamed Ali <01098811581>",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --ia32 --x64",
+    "dist:x64": "electron-builder --win nsis --x64",
+    "keygen": "node keygen/keygen.js"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.ghandi.central",
+    "productName": "Ghandi Central",
+    "copyright": "م. محمد علي — 01098811581",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "preload.js", "lib/**/*", "src/**/*", "build/icon.png", "package.json", "!keygen/**/*", "!docs/**/*"],
+    "asar": true,
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64", "ia32"] }],
+      "icon": "build/icon.png",
+      "artifactName": "Ghandi-Central-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "غاندي للسنترالات",
+      "uninstallDisplayName": "غاندي — إدارة السنترالات",
+      "deleteAppDataOnUninstall": false,
+      "language": "1025",
+      "installerLanguages": ["ar_SA", "en_US"],
+      "multiLanguageInstaller": true,
+      "runAfterFinish": true
+    }
+  }
+}

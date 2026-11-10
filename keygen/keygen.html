@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>مولد مفاتيح غاندي — السنترالات</title>
+<style>
+body{font-family:Tahoma,Segoe UI,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:24px}
+.box{max-width:720px;margin:auto;background:#1e293b;border-radius:14px;padding:24px;box-shadow:0 10px 40px #0006}
+h1{margin:0 0 4px;color:#38bdf8;font-size:22px}small{color:#94a3b8}
+label{display:block;margin:14px 0 6px;color:#cbd5e1}
+input,select,textarea{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#fff;font-size:15px}
+textarea{height:110px;direction:ltr;font-family:monospace;font-size:13px}
+button{margin-top:16px;padding:12px 20px;border:0;border-radius:8px;background:#0ea5e9;color:#fff;font-size:16px;cursor:pointer}
+button.g{background:#334155}
+.row{display:flex;gap:12px}.row>div{flex:1}
+.warn{background:#7f1d1d;padding:10px;border-radius:8px;margin-top:16px;font-size:13px}
+table{width:100%;margin-top:16px;border-collapse:collapse;font-size:12px}td,th{border-bottom:1px solid #334155;padding:6px;text-align:right}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🔑 مولد مفاتيح التفعيل — نظام غاندي للسنترالات</h1>
+  <small>للمطور فقط: م. محمد علي — 01098811581</small>
+  <label>بصمة جهاز العميل (تظهر في شاشة التفعيل)</label>
+  <input id="fp" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" style="direction:ltr">
+  <div class="row">
+    <div><label>المدة</label>
+      <select id="days">
+        <option value="7">أسبوع تجربة</option><option value="30">شهر</option><option value="90">3 شهور</option>
+        <option value="180">6 شهور</option><option value="365" selected>سنة</option><option value="730">سنتين</option><option value="0">مدى الحياة</option>
+      </select></div>
+    <div><label>أو عدد أيام مخصص</label><input id="custom" type="number" min="0" placeholder="اختياري"></div>
+  </div>
+  <label>اسم المحل</label><input id="shop" placeholder="سنترال ...">
+  <button onclick="gen()">توليد المفتاح</button>
+  <label>المفتاح</label><textarea id="out" readonly></textarea>
+  <button class="g" onclick="navigator.clipboard.writeText(out.value);this.textContent='تم النسخ ✔'">نسخ المفتاح</button>
+  <table id="log"><thead><tr><th>التاريخ</th><th>المحل</th><th>البصمة</th><th>الانتهاء</th></tr></thead><tbody></tbody></table>
+  <div class="warn">⚠️ هذا الملف يحتوي على المفتاح الخاص للتوقيع. لا ترسله لأي حد ولا ترفعه على ريبو عام. يعمل على كروم/إيدج حديث بدون إنترنت.</div>
+</div>
+<script>
+const PRIV_B64 = 'MC4CAQAwBQYDK2VwBCIEIB+euBZYmUcQBJPiXWPTvenV1MUuc43Wht/i+hLTyxss';
+const b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const utf8b64u = s => b64u(new TextEncoder().encode(s));
+async function gen(){
+  const fp = document.getElementById('fp').value.trim().toUpperCase();
+  if(!/^[0-9A-F]{4}(-[0-9A-F]{4}){4}$/.test(fp)) return alert('البصمة غير صحيحة');
+  const c = document.getElementById('custom').value;
+  const days = c !== '' ? Number(c) : Number(document.getElementById('days').value);
+  let exp='LIFE'; if(days>0){const d=new Date();d.setDate(d.getDate()+days);exp=d.toISOString().slice(0,10);}
+  const shop = document.getElementById('shop').value.trim();
+  const data = {prod:'GHANDI-CENTRAL',fp,exp,shop,plan:'full',iat:new Date().toISOString().slice(0,10)};
+  const p = utf8b64u(JSON.stringify(data));
+  try{
+    const der = Uint8Array.from(atob(PRIV_B64), ch=>ch.charCodeAt(0));
+    const key = await crypto.subtle.importKey('pkcs8', der, {name:'Ed25519'}, false, ['sign']);
+    const sig = await crypto.subtle.sign({name:'Ed25519'}, key, new TextEncoder().encode('GC1.'+p));
+    const lic = 'GC1.'+p+'.'+b64u(sig);
+    document.getElementById('out').value = lic;
+    const log = JSON.parse(localStorage.getItem('gc_log')||'[]'); log.unshift({...data,lic}); localStorage.setItem('gc_log',JSON.stringify(log.slice(0,500))); draw();
+  }catch(e){ alert('المتصفح لا يدعم التوقيع Ed25519 — حدّث كروم/إيدج أو استخدم keygen.js بالنود\n'+e); }
+}
+function draw(){const log=JSON.parse(localStorage.getItem('gc_log')||'[]');document.querySelector('#log tbody').innerHTML=log.map(l=>`<tr><td>${l.iat}</td><td>${l.shop}</td><td style="direction:ltr">${l.fp}</td><td>${l.exp==='LIFE'?'مدى الحياة':l.exp}</td></tr>`).join('');}
+draw();
+</script>
+</body>
+</html>

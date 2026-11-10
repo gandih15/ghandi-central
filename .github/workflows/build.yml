@@ -1,0 +1,26 @@
+# بناء مثبّت الويندوز تلقائياً على جيت هب
+# كل ما ترفع تعديل أو تعمل Tag (مثلاً v1.0.1) هيطلع ملف Setup.exe جاهز
+name: Build Windows Installer
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 18 }
+      - run: npm install
+      - run: npm run dist
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ghandi-Central-Setup
+          path: dist/*.exe
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with: { files: "dist/*.exe" }

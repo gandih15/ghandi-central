@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob:; img-src 'self' data: blob:">
+<title>غاندي — إدارة السنترالات ومحلات الموبايل</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="gate" class="gate"><div class="card"><div class="empty">جاري التحميل...</div></div></div>
+<div id="app" class="hidden">
+  <aside id="side"><div class="brand"></div><nav id="nav"></nav><div class="foot"></div></aside>
+  <main id="main">
+    <header id="top">
+      <h2 id="ptitle"></h2>
+      <span class="who" id="who"></span>
+      <button class="btn ghost sm" id="btnBackup" title="نسخة احتياطية الآن">💾</button>
+      <button class="btn ghost sm" id="btnTheme" title="الوضع الليلي">🌓</button>
+      <button class="btn ghost sm" id="btnDev" title="لوحة المطور">👨‍💻</button>
+      <button class="btn ghost sm" id="btnPass" title="تغيير كلمة المرور">🔑</button>
+      <button class="btn ghost sm" id="btnLock" title="قفل الشاشة">🔒</button>
+      <button class="btn bad sm" id="btnLogout">خروج</button>
+    </header>
+    <section id="page"></section>
+  </main>
+</div>
+<div id="toasts"></div>
+<datalist id="dl-brands"></datalist>
+<script src="js/core.js"></script>
+<script src="js/barcode.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pages/dashboard.js"></script>
+<script src="js/pages/pos.js"></script>
+<script src="js/pages/items.js"></script>
+<script src="js/pages/purchases.js"></script>
+<script src="js/pages/repairs.js"></script>
+<script src="js/pages/finops.js"></script>
+<script src="js/pages/sales.js"></script>
+<script src="js/pages/installments.js"></script>
+<script src="js/pages/people.js"></script>
+<script src="js/pages/accounts.js"></script>
+<script src="js/pages/reports.js"></script>
+<script src="js/pages/system.js"></script>
+</body>
+</html>

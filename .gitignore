@@ -1,0 +1,4 @@
+node_modules/
+dist/
+*.log
+keygen/licenses-log.csv
