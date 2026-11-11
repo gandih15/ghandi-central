@@ -32,7 +32,7 @@ Pages.dashboard = el => {
   const od = overdueInstallments(); if (od.length) alerts.push(['bad', `📅 ${od.length} قسط متأخر بإجمالي ${fmt(sum(od, o => o.x.amount - num(o.x.paid)))}`, 'installments']);
   const oldReady = ready.filter(r => daysBetween(dOnly(r.readyAt || r.date), t) > 7); if (oldReady.length) alerts.push(['warn', `🔧 ${oldReady.length} جهاز جاهز من أكتر من أسبوع ولم يستلم`, 'repairs']);
   const late = open.filter(r => r.expected && r.expected < t && r.status !== 'ready'); if (late.length) alerts.push(['bad', `⏰ ${late.length} جهاز صيانة تعدى موعد التسليم`, 'repairs']);
-  DB.accounts.filter(a => a.active && a.type === 'wallet' && num(a.dayLimit)).forEach(a => { const u = walletUsage(a); if (u.day > num(a.dayLimit) * 0.85) alerts.push(['warn', `💳 ${a.name} قربت من الحد اليومي (${fmt(u.day)}/${fmt(a.dayLimit)})`, 'accounts']); });
+  DB.accounts.filter(a => a.active && a.type === 'wallet').forEach(a => walletLimits(a).filter(x => x.pct >= (num(a.warnPct) || 85)).forEach(x => alerts.push([x.pct >= 100 ? 'bad' : 'warn', `💳 ${a.name}: ${x.l} ${x.pct}% (${fmt(x.used)}/${fmt(x.limit)})`, 'limits'])));
   DB.accounts.filter(a => a.active && ['recharge', 'provider'].includes(a.type) && DB.moves.some(m => m.accountId === a.id) && accBalance(a.id) < 200).forEach(a => alerts.push(['warn', `📶 رصيد ${a.name} قليل: ${fmt(accBalance(a.id))}`, 'accounts']));
   if (LIC.ok && LIC.data.exp !== 'LIFE' && daysBetween(t, LIC.data.exp) <= 15) alerts.push(['bad', `🔑 الترخيص ينتهي ${fmtDate(LIC.data.exp)} — كلم المطور ${DEV.phone}`, '']);
   if (!DB.meta.lastBackup || daysBetween(dOnly(DB.meta.lastBackup), t) > 1) alerts.push(['warn', '💾 لم يتم عمل نسخة احتياطية حديثة', 'backup']);

@@ -1,7 +1,7 @@
 /* الخزن والمحافظ + التحويلات + المصروفات + الورديات */
 'use strict';
 const ACC_F = () => [{ k: 'name', l: 'اسم الحساب', req: true }, { k: 'type', l: 'النوع', t: 'select', o: Object.entries(ACC_TYPES) }, { k: 'provider', l: 'الشبكة / الجهة', t: 'select', o: [['', '-'], ['Vodafone', 'فودافون'], ['Orange', 'أورنج'], ['Etisalat', 'اتصالات e&'], ['WE', 'WE'], ['InstaPay', 'إنستاباي'], ['Fawry', 'فوري'], ['Aman', 'أمان'], ['Masary', 'مصاري'], ['BTech', 'Bee / غيره'], ['Bank', 'بنك']] },
-  { k: 'phone', l: 'رقم الخط / المحفظة' }, { k: 'dayLimit', l: 'الحد اليومي للتحويل', t: 'number' }, { k: 'monthLimit', l: 'الحد الشهري', t: 'number' },
+  { k: 'phone', l: 'رقم الخط / المحفظة' }, { k: 'dayLimit', l: 'حد الإرسال اليومي', t: 'number' }, { k: 'monthLimit', l: 'حد الإرسال الشهري', t: 'number' }, { k: 'inDayLimit', l: 'حد الاستقبال اليومي', t: 'number' }, { k: 'inMonthLimit', l: 'حد الاستقبال الشهري', t: 'number' }, { k: 'warnPct', l: 'نبهني عند نسبة % من الحد', t: 'number' },
   { k: 'feePct', l: 'عمولة % على العميل', t: 'number' }, { k: 'feeFixed', l: 'عمولة ثابتة', t: 'number' }, { k: 'feeMin', l: 'أقل عمولة', t: 'number' }, { k: 'feeMax', l: 'أقصى عمولة', t: 'number' },
   { k: 'costRate', l: 'معامل تكلفة الرصيد (مثلاً 0.97)', t: 'number' }, { k: 'sellRate', l: 'معامل سعر بيع الرصيد (مثلاً 1)', t: 'number' }, { k: 'active', l: 'نشط', t: 'check', d: true }];
 
@@ -9,7 +9,7 @@ Pages.accounts = el => {
   el.innerHTML = `<div class="row mb"><button class="btn" id="aadd">➕ حساب / محفظة</button>${can('transfer') ? '<button class="btn vio" id="atr">🔁 تحويل / تغذية رصيد</button>' : ''}<button class="btn ok" id="ain">➕ إيداع (رأس مال)</button><button class="btn warn" id="aout">➖ مسحوبات شخصية</button></div><div class="grid g4" id="acards"></div><h3 class="mt">آخر الحركات</h3><div id="amoves"></div>`;
   const draw = () => {
     $('#acards').innerHTML = DB.accounts.map(a => { const b = accBalance(a.id); const u = a.type === 'wallet' ? walletUsage(a) : null; return `<div class="card" ${a.active ? '' : 'style="opacity:.5"'}><div class="row"><b style="flex:1">${esc(a.name)}</b><span class="tag">${ACC_TYPES[a.type]}</span></div>
-      <div style="font-size:24px;font-weight:800;margin:8px 0" class="${b < 0 ? 'bad-t' : ''}">${fmt(b)}</div>${a.phone ? `<div class="ltr muted">${esc(a.phone)}</div>` : ''}${u && num(a.dayLimit) ? `<div class="muted" style="font-size:12px">اليوم: ${fmt(u.day)}/${fmt(a.dayLimit)} — الشهر: ${fmt(u.month)}/${fmt(a.monthLimit)}</div>` : ''}
+      <div style="font-size:24px;font-weight:800;margin:8px 0" class="${b < 0 ? 'bad-t' : ''}">${fmt(b)}</div>${a.phone ? `<div class="ltr muted">${esc(a.phone)}</div>` : ''}${u ? limitBars(a, true) : ''}
       <div class="row mt"><button class="btn sm ghost" data-l="${a.id}">📒 كشف</button>${a.system ? '' : `<button class="btn sm ghost" data-e="${a.id}">✏️</button>`}<button class="btn sm ghost" data-adj="${a.id}">⚖️ تسوية</button></div></div>`; }).join('');
     $('#amoves').innerHTML = tableHTML([{ l: 'الوقت', f: m => fmtDT(m.date) }, { l: 'الحساب', f: m => esc(accName(m.accountId)) }, { l: 'المبلغ', f: m => `<b class="${m.amount < 0 ? 'bad-t' : 'ok-t'}">${fmt(m.amount)}</b>` }, { l: 'البيان', f: m => esc(m.ref) + ' ' + esc(m.note || '') }, { l: 'المستخدم', k: 'user' }], DB.moves.slice(-150).reverse());
     $$('[data-e]', el).forEach(b => b.onclick = () => accForm(find('accounts', b.dataset.e), draw));
@@ -29,7 +29,7 @@ Pages.accounts = el => {
 };
 function accForm(a, cb) {
   const F = ACC_F();
-  modal({ title: a ? 'تعديل حساب' : 'حساب جديد', wide: true, body: formHTML(F, a || { type: 'wallet', active: true, costRate: 1, sellRate: 1 }, 3) + (a ? '' : formHTML([{ k: 'opening', l: 'الرصيد الافتتاحي', t: 'number' }], {}, 3)) + '<p class="muted">العمولة بتتحسب تلقائياً في شاشة الخدمات المالية وتقدر تعدلها. معامل التكلفة لرصيد الشبكات: لو بتشتري 100 وحدة بـ 97 جنيه اكتب 0.97.</p>',
+  modal({ title: a ? 'تعديل حساب' : 'حساب جديد', wide: true, body: formHTML(F, a || { type: 'wallet', active: true, costRate: 1, sellRate: 1 }, 3) + (a ? '' : formHTML([{ k: 'opening', l: 'الرصيد الافتتاحي', t: 'number' }], {}, 3)) + '<p class="muted">الحدود (الليمت): اكتب حدود شركة المحفظة لكل خط — 0 يعني بدون حد. البرنامج بيحسب الإرسال والاستقبال لوحده من العمليات.<br>العمولة بتتحسب تلقائياً في شاشة الخدمات المالية وتقدر تعدلها. معامل التكلفة لرصيد الشبكات: لو بتشتري 100 وحدة بـ 97 جنيه اكتب 0.97.</p>',
     buttons: [{ text: 'حفظ', click: o => { const d = readForm(o, F); if (a) Object.assign(a, d); else { const n = { id: uid(), ...d }; DB.accounts.push(n); const op = num($('[name=opening]', o).value); if (op) addMove(n.id, op, 'opening', 'رصيد افتتاحي'); } audit('حساب', d.name); save(); cb && cb(); } }, { text: 'إلغاء', cls: 'ghost' }] });
 }
 function transferForm(cb) {

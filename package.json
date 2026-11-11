@@ -1,7 +1,7 @@
 {
   "name": "ghandi-central",
   "productName": "Ghandi Central",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "غاندي — نظام إدارة السنترالات ومحلات الموبايل والصيانة",
   "main": "main.js",
   "author": "Eng. Mohamed Ali <01098811581>",

@@ -69,7 +69,7 @@ function defaultDB() {
   COLLECTIONS.forEach(c => db[c] = []);
   db.accounts = [
     { id: 'cash', name: 'الخزنة (كاش)', type: 'cash', active: true, system: true },
-    { id: uid(), name: 'فودافون كاش', type: 'wallet', provider: 'Vodafone', phone: '', dayLimit: 60000, monthLimit: 200000, feeFixed: 0, feePct: 1, feeMin: 5, active: true },
+    { id: uid(), name: 'فودافون كاش', type: 'wallet', provider: 'Vodafone', phone: '', dayLimit: 60000, monthLimit: 200000, inDayLimit: 60000, inMonthLimit: 200000, feeFixed: 0, feePct: 1, feeMin: 5, active: true },
     { id: uid(), name: 'إنستاباي', type: 'wallet', provider: 'InstaPay', phone: '', dayLimit: 0, monthLimit: 0, feeFixed: 0, feePct: 0, feeMin: 0, active: true },
     { id: uid(), name: 'رصيد فودافون', type: 'recharge', provider: 'Vodafone', costRate: 0.97, active: true },
     { id: uid(), name: 'رصيد أورنج', type: 'recharge', provider: 'Orange', costRate: 0.97, active: true },
@@ -138,10 +138,31 @@ const accBalance = (id, until) => r2(sum(DB.moves.filter(m => m.accountId === id
 const accName = id => find('accounts', id)?.name || '-';
 const ACC_TYPES = { cash: 'خزنة نقدية', wallet: 'محفظة إلكترونية', recharge: 'رصيد شبكة', provider: 'خدمة دفع (فوري/أمان..)', bank: 'بنك / فيزا' };
 const payAccounts = () => DB.accounts.filter(a => a.active && ['cash', 'wallet', 'bank'].includes(a.type));
-function walletUsage(acc) {
-  const t = today(), m = t.slice(0, 7);
-  const outs = DB.moves.filter(x => x.accountId === acc.id && x.amount < 0);
-  return { day: -sum(outs.filter(x => dOnly(x.date) === t), 'amount'), month: -sum(outs.filter(x => x.date.slice(0, 7) === m), 'amount') };
+/* استخدام ليمت المحفظة: الإرسال (خارج) والاستقبال (داخل) — يومي وشهري
+   لا يحسب: الرصيد الافتتاحي والتسويات. الإلغاء يرجّع الاستخدام. */
+const LIMIT_SKIP = ['opening', 'adjust'];
+function walletUsage(acc, day) {
+  const t = day || today(), m = t.slice(0, 7);
+  const mv = DB.moves.filter(x => x.accountId === acc.id && !LIMIT_SKIP.includes(x.kind) && x.date.slice(0, 7) === m);
+  const calc = list => {
+    const out = -sum(list.filter(x => x.amount < 0 && x.kind !== 'void'), 'amount') - sum(list.filter(x => x.amount > 0 && x.kind === 'void'), 'amount');
+    const inn = sum(list.filter(x => x.amount > 0 && x.kind !== 'void'), 'amount') + sum(list.filter(x => x.amount < 0 && x.kind === 'void'), 'amount');
+    return { out: r2(Math.max(0, out)), in: r2(Math.max(0, inn)), n: list.filter(x => x.kind !== 'void').length };
+  };
+  const d = calc(mv.filter(x => dOnly(x.date) === t)), mo = calc(mv);
+  return { day: d.out, month: mo.out, inDay: d.in, inMonth: mo.in, nDay: d.n, nMonth: mo.n };
+}
+// قائمة الحدود: [المفتاح, الاسم, المستخدم, الحد]
+function walletLimits(acc) {
+  const u = walletUsage(acc);
+  return [['dayLimit', 'إرسال اليوم', u.day], ['monthLimit', 'إرسال الشهر', u.month], ['inDayLimit', 'استقبال اليوم', u.inDay], ['inMonthLimit', 'استقبال الشهر', u.inMonth]]
+    .filter(([k]) => num(acc[k]) > 0).map(([k, l, used]) => ({ k, l, used, limit: num(acc[k]), left: r2(num(acc[k]) - used), pct: Math.min(100, Math.round(used / num(acc[k]) * 100)) }));
+}
+// المتبقي من الليمت في اتجاه معين (out = إرسال / in = استقبال) — Infinity لو مفيش حد
+function walletRoom(acc, dir) {
+  const u = walletUsage(acc);
+  const pairs = dir === 'in' ? [[acc.inDayLimit, u.inDay], [acc.inMonthLimit, u.inMonth]] : [[acc.dayLimit, u.day], [acc.monthLimit, u.month]];
+  return Math.min(...pairs.map(([l, used]) => num(l) > 0 ? r2(num(l) - used) : Infinity));
 }
 
 /* -------- العملاء والموردين -------- */
@@ -298,4 +319,11 @@ function barChart(labels, series, { h = 220, colors = ['#0ea5e9', '#16a34a', '#f
   });
   const legend = series.map((s, j) => `<span class="tag" style="border-color:${colors[j]}"><span style="color:${colors[j]}">■</span> ${esc(s.name)}</span>`).join(' ');
   return `<div>${legend}</div><svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="none" style="direction:ltr">${g}</svg>`;
+}
+
+/* -------- أشرطة الليمت -------- */
+function limitBars(acc, compact) {
+  const L = walletLimits(acc);
+  if (!L.length) return compact ? '' : '<div class="muted" style="font-size:12px">لا توجد حدود مسجلة لهذه المحفظة</div>';
+  return `<div class="lbars ${compact ? 'cmp' : ''}">${L.map(x => `<div class="lbar" title="${x.l}: ${fmt(x.used)} من ${fmt(x.limit)}"><div class="lt"><span>${x.l}</span><span>${compact ? x.pct + '%' : `${fmt(x.used)} / ${fmt(x.limit)} — متبقي <b>${fmt(Math.max(0, x.left))}</b>`}</span></div><div class="lb"><i style="width:${x.pct}%" class="${x.pct >= 100 ? 'full' : x.pct >= (num(acc.warnPct) || 85) ? 'hot' : ''}"></i></div></div>`).join('')}</div>`;
 }

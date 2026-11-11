@@ -2,9 +2,10 @@
 'use strict';
 const Pages = {};
 let INFO = {}, LIC = {}, currentPage = null;
+const PAGE_PERM = { limits: 'finops' };
 
 const NAV = [
-  ['الرئيسية', [['dashboard', '📊', 'لوحة التحكم'], ['pos', '🛒', 'نقطة البيع'], ['finops', '💸', 'كاش ورصيد وفواتير']]],
+  ['الرئيسية', [['dashboard', '📊', 'لوحة التحكم'], ['pos', '🛒', 'نقطة البيع'], ['finops', '💸', 'كاش ورصيد وفواتير'], ['limits', '📶', 'متابعة ليمت المحافظ']]],
   ['الصيانة', [['repairs', '🔧', 'تذاكر الصيانة'], ['imei', '🔍', 'بحث IMEI / سيريال']]],
   ['المبيعات', [['sales', '🧾', 'فواتير البيع'], ['returns', '↩️', 'المرتجعات'], ['installments', '📅', 'الأقساط'], ['reservations', '📌', 'الحجوزات والطلبات'], ['customers', '👥', 'العملاء']]],
   ['المخزون', [['items', '📦', 'الأصناف والمخزون'], ['purchases', '🚚', 'المشتريات'], ['used', '📱', 'شراء مستعمل'], ['suppliers', '🏭', 'الموردين'], ['labels', '🏷️', 'طباعة باركود']]],
@@ -149,7 +150,7 @@ function renderSide() {
   const s = DB.settings;
   $('#side .brand').innerHTML = `<img src="${s.logo || 'logo.png'}"><div><b>${esc(s.shopName)}</b><small>غاندي للسنترالات</small></div>`;
   $('#nav').innerHTML = NAV.map(([g, items]) => {
-    const vis = items.filter(([k]) => k === 'about' || can(k));
+    const vis = items.filter(([k]) => k === 'about' || can(PAGE_PERM[k] || k));
     return vis.length ? `<div class="grp">${g}</div>` + vis.map(([k, ic, l]) => `<a data-p="${k}"><i>${ic}</i><span>${l}</span>${badgeFor(k)}</a>`).join('') : '';
   }).join('');
   $$('#nav a').forEach(a => a.onclick = () => go(a.dataset.p));
@@ -167,7 +168,7 @@ function badgeFor(k) {
   return n ? `<span class="badge">${n}</span>` : '';
 }
 function go(page, arg) {
-  if (page !== 'about' && !can(page)) return toast('ليس لديك صلاحية', 'bad');
+  if (page !== 'about' && !can(PAGE_PERM[page] || page)) return toast('ليس لديك صلاحية', 'bad');
   if (!Pages[page]) return toast('الصفحة غير موجودة', 'bad');
   currentPage = page;
   $$('#nav a').forEach(a => a.classList.toggle('act', a.dataset.p === page));
@@ -216,7 +217,7 @@ async function doBackup(reason = '', quiet = false) {
 /* ---------- اختصارات ---------- */
 document.addEventListener('keydown', e => {
   if (!SESSION || $('.ovl') || $('.lock')) return;
-  const map = { F1: 'pos', F3: 'repairs', F4: 'finops', F6: 'items', F7: 'customers', F8: 'reports' };
+  const map = { F1: 'pos', F3: 'repairs', F4: 'finops', F5: 'limits', F6: 'items', F7: 'customers', F8: 'reports' };
   if (map[e.key] && can(map[e.key])) { e.preventDefault(); go(map[e.key]); }
 });
 window.addEventListener('DOMContentLoaded', () => {

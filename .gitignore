@@ -2,3 +2,8 @@ node_modules/
 dist/
 *.log
 keygen/licenses-log.csv
+# المفتاح الخاص للتراخيص — عند المطور فقط، ممنوع يترفع
+keygen/private_key.pem
+keygen/*personal*.html
+*.pem
+!build/public_key.pem

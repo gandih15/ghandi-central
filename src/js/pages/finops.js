@@ -17,7 +17,7 @@ Pages.finops = el => {
   const t = today();
   el.innerHTML = `<div class="grid g4 mb">${Object.entries(FIN_KINDS).map(([k, v]) => `<div class="kpi c${Object.keys(FIN_KINDS).indexOf(k) + 1}" style="cursor:pointer" data-k="${k}"><div class="ic">${v[3]}</div><div class="v" style="font-size:17px">${v[0]}</div><div class="l">${v[1]}</div></div>`).join('')}</div>
   <div class="card mb"><h3>💼 أرصدة الحسابات الآن</h3><div class="grid g6" id="fbal"></div></div>
-  <div class="card"><div class="row mb"><h3 style="margin:0">عمليات</h3><input type="date" id="ff" value="${t}" style="width:150px"><input type="date" id="ft" value="${t}" style="width:150px"><select id="fk" style="width:180px"><option value="">كل الأنواع</option>${Object.entries(FIN_KINDS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select><input id="fq" placeholder="بحث برقم العميل" style="width:180px"><span class="sp"></span><button class="btn ghost sm" id="fexp">📤 تصدير</button></div><div id="fsum" class="row mb"></div><div id="ftbl"></div></div>`;
+  <div class="card"><div class="row mb"><h3 style="margin:0">عمليات</h3><input type="date" id="ff" value="${t}" style="width:150px"><input type="date" id="ft" value="${t}" style="width:150px"><select id="fk" style="width:180px"><option value="">كل الأنواع</option>${Object.entries(FIN_KINDS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select><input id="fq" placeholder="بحث برقم العميل" style="width:180px"><span class="sp"></span><button class="btn ghost sm" onclick="go('limits')">📶 متابعة الليمت</button><button class="btn ghost sm" id="fexp">📤 تصدير</button></div><div id="fsum" class="row mb"></div><div id="ftbl"></div></div>`;
   $$('[data-k]', el).forEach(c => c.onclick = () => finForm(c.dataset.k, draw));
   let from = t, to = t, fk = '', q = '';
   const cols = [{ l: 'رقم', k: 'no' }, { l: 'الوقت', f: x => fmtDT(x.date) }, { l: 'العملية', f: x => `${FIN_KINDS[x.kind][3]} ${FIN_KINDS[x.kind][0]}` }, { l: 'الحساب', f: x => esc(accName(x.accountId)) },
@@ -25,7 +25,7 @@ Pages.finops = el => {
     { l: 'الربح', f: x => x.void ? '0' : fmt(x.profit), sum: x => x.void ? 0 : x.profit }, { l: 'بواسطة', k: 'user' }, { l: '', f: x => x.void ? '<span class="tag bad">ملغاة</span>' : `<button class="btn sm ghost" data-pr="${x.id}">🖨️</button> <button class="btn sm bad" data-v="${x.id}">إلغاء</button>` }];
   const rows = () => DB.finops.filter(x => dOnly(x.date) >= from && dOnly(x.date) <= to && (!fk || x.kind === fk) && match(q, x.phone, x.custName, x.ref)).slice().reverse();
   function draw() {
-    $('#fbal').innerHTML = DB.accounts.filter(a => a.active).map(a => { const b = accBalance(a.id); let lim = ''; if (a.type === 'wallet' && num(a.dayLimit)) { const u = walletUsage(a); lim = `<div class="l">اليوم: ${fmt(u.day)} / ${fmt(a.dayLimit)}</div>`; } return `<div class="kpi"><div class="l">${esc(a.name)}</div><div class="v ${b < 0 ? 'bad-t' : ''}" style="font-size:17px">${fmt(b)}</div>${lim}</div>`; }).join('');
+    $('#fbal').innerHTML = DB.accounts.filter(a => a.active).map(a => { const b = accBalance(a.id); let lim = a.type === 'wallet' ? limitBars(a, true) : ''; return `<div class="kpi"><div class="l">${esc(a.name)}</div><div class="v ${b < 0 ? 'bad-t' : ''}" style="font-size:17px">${fmt(b)}</div>${lim}</div>`; }).join('');
     const r = rows();
     $('#ftbl').innerHTML = tableHTML(cols, r, { foot: true, limit: 500 });
     $('#fsum').innerHTML = Object.entries(FIN_KINDS).map(([k, v]) => { const l = r.filter(x => x.kind === k && !x.void); return `<span class="tag">${v[0]}: ${l.length} عملية — ${fmt(sum(l, 'amount'))} — ربح ${fmt(sum(l, 'profit'))}</span>`; }).join(' ');
@@ -74,8 +74,19 @@ function finForm(kind, cb) {
     let w = '';
     if (kind !== 'wallet_in' && bal < (isRech ? v.amount : v.amount + v.cost)) w += `<div class="alert bad">⚠️ رصيد ${esc(a.name)} غير كافي (${fmt(bal)})</div>`;
     if (kind === 'wallet_in' && accBalance($('#fcash', o).value) < v.cash) w += `<div class="alert warn">⚠️ الكاش في الخزنة أقل من المبلغ</div>`;
-    if (a.type === 'wallet' && num(a.dayLimit)) { const u = walletUsage(a); if (kind === 'wallet_out' && u.day + v.amount > num(a.dayLimit)) w += `<div class="alert warn">⚠️ هتعدي الحد اليومي للمحفظة (${fmt(u.day)} من ${fmt(a.dayLimit)})</div>`; if (num(a.monthLimit) && u.month + v.amount > num(a.monthLimit)) w += `<div class="alert warn">⚠️ هتعدي الحد الشهري</div>`; }
+    if (a.type === 'wallet' && v.amount > 0) {
+      const dir = kind === 'wallet_in' ? 'in' : 'out', need = dir === 'in' ? v.amount - v.cost : v.amount + v.cost;
+      const room = walletRoom(a, dir);
+      if (need > room) {
+        w += `<div class="alert bad">⛔ ${esc(a.name)}: العملية هتعدّي حد ${dir === 'in' ? 'الاستقبال' : 'الإرسال'} — المتبقي ${fmt(Math.max(0, room))} فقط</div>`;
+        const alts = DB.accounts.filter(x => x.active && x.type === 'wallet' && x.id !== a.id && walletRoom(x, dir) >= need && (dir === 'in' || accBalance(x.id) >= need));
+        if (alts.length) w += `<div class="alert ok">💡 محافظ فيها مساحة: ${alts.map(x => `<button type="button" class="btn sm ok" data-sw="${x.id}">${esc(x.name)} (تقدر ${dir === 'in' ? 'تستقبل' : 'ترسل'} ${(() => { const r = dir === 'in' ? walletRoom(x, dir) : Math.min(walletRoom(x, dir), accBalance(x.id)); return r === Infinity ? 'بدون حد' : fmt(r); })()})</button>`).join(' ')}</div>`;
+        else w += `<div class="alert warn">مفيش محفظة تانية فيها مساحة كفاية للمبلغ ده — قسّم العملية أو استنى بكرة.</div>`;
+      } else if (room !== Infinity) w += `<div class="alert pri">المتبقي من ليمت ${dir === 'in' ? 'الاستقبال' : 'الإرسال'} بعد العملية: <b>${fmt(room - need)}</b></div>`;
+      w += limitBars(a);
+    }
     $('#fwarn', o).innerHTML = w;
+    $$('[data-sw]', o).forEach(b => b.onclick = () => { $('#facc', o).value = b.dataset.sw; feeTouched = false; upd(); });
   };
   $$('input,select', o).forEach(i => i.addEventListener('input', upd));
   $('#facc', o).onchange = () => { feeTouched = priceTouched = false; upd(); };
@@ -88,6 +99,7 @@ function finForm(kind, cb) {
   function exec(o, print) {
     const a = acc(), v = vals(), cashAcc = $('#fcash', o).value;
     if (v.amount <= 0) { toast('أدخل المبلغ', 'warn'); return false; }
+    if (a.type === 'wallet') { const dir = kind === 'wallet_in' ? 'in' : 'out', need = dir === 'in' ? v.amount - v.cost : v.amount + v.cost; if (need > walletRoom(a, dir) && !isAdmin()) { toast('العملية بتعدّي ليمت المحفظة — اختار محفظة تانية', 'bad'); return false; } }
     const no = nextNo('fin');
     const op = { id: uid(), no, date: nowISO(), kind, accountId: a.id, cashAccountId: cashAcc, phone: $('#fphone', o).value.trim(), custName: $('#fname', o).value.trim(), service: $('#fsvc', o)?.value || '', ref: $('#fref', o).value.trim(), ...v, user: me(), shiftId: currentShift()?.id || '' };
     const ref = `${FIN_KINDS[kind][0]} ${no}`;

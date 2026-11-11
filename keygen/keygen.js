@@ -9,7 +9,9 @@ const path = require('path');
 const readline = require('readline');
 const { signLicense, verifyLicense } = require('../lib/license-core');
 
-const priv = fs.readFileSync(path.join(__dirname, 'private_key.pem'), 'utf8');
+const keyPath = process.env.GHANDI_KEY || path.join(__dirname, 'private_key.pem');
+if (!fs.existsSync(keyPath)) { console.error('المفتاح الخاص مش موجود: ' + keyPath + '\nحط ملف private_key.pem جنب keygen.js (محفوظ عندك بس)'); process.exit(1); }
+const priv = fs.readFileSync(keyPath, 'utf8');
 const logFile = path.join(__dirname, 'licenses-log.csv');
 
 function make(fp, days, shop) {

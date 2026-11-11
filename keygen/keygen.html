@@ -21,6 +21,7 @@ table{width:100%;margin-top:16px;border-collapse:collapse;font-size:12px}td,th{b
 <div class="box">
   <h1>🔑 مولد مفاتيح التفعيل — نظام غاندي للسنترالات</h1>
   <small>للمطور فقط: م. محمد علي — 01098811581</small>
+  <div id="keybox" class="warn" style="background:#1e3a8a;display:none">🔐 اختار ملف المفتاح الخاص <b>private_key.pem</b> (مش موجود على جيت هب — محفوظ عندك بس)<br><input type="file" id="pemf" accept=".pem" style="margin-top:8px"><label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="remember" style="width:auto"> تذكّره على الجهاز ده</label></div>
   <label>بصمة جهاز العميل (تظهر في شاشة التفعيل)</label>
   <input id="fp" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" style="direction:ltr">
   <div class="row">
@@ -36,13 +37,17 @@ table{width:100%;margin-top:16px;border-collapse:collapse;font-size:12px}td,th{b
   <label>المفتاح</label><textarea id="out" readonly></textarea>
   <button class="g" onclick="navigator.clipboard.writeText(out.value);this.textContent='تم النسخ ✔'">نسخ المفتاح</button>
   <table id="log"><thead><tr><th>التاريخ</th><th>المحل</th><th>البصمة</th><th>الانتهاء</th></tr></thead><tbody></tbody></table>
-  <div class="warn">⚠️ هذا الملف يحتوي على المفتاح الخاص للتوقيع. لا ترسله لأي حد ولا ترفعه على ريبو عام. يعمل على كروم/إيدج حديث بدون إنترنت.</div>
+  <div class="warn">⚠️ المفتاح الخاص (private_key.pem أو النسخة الشخصية من الأداة) خليه عندك بس — ماترفعهوش على جيت هب ولا تبعته لحد. يعمل على كروم/إيدج حديث بدون إنترنت.</div>
 </div>
 <script>
-const PRIV_B64 = 'MC4CAQAwBQYDK2VwBCIEIB+euBZYmUcQBJPiXWPTvenV1MUuc43Wht/i+hLTyxss';
+const PRIV_B64 = ''; // فاضي في الريبو — النسخة الشخصية عند المطور فيها المفتاح
 const b64u = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const utf8b64u = s => b64u(new TextEncoder().encode(s));
+let KEY_B64 = PRIV_B64 || localStorage.getItem('gc_priv') || '';
+if(!KEY_B64) document.getElementById('keybox').style.display='block';
+document.getElementById('pemf').onchange = e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ KEY_B64 = r.result.replace(/-----[^-]+-----/g,'').replace(/\s+/g,''); if(document.getElementById('remember').checked) localStorage.setItem('gc_priv',KEY_B64); alert('تم تحميل المفتاح ✔'); }; r.readAsText(f); };
 async function gen(){
+  if(!KEY_B64) return alert('اختار ملف private_key.pem الأول');
   const fp = document.getElementById('fp').value.trim().toUpperCase();
   if(!/^[0-9A-F]{4}(-[0-9A-F]{4}){4}$/.test(fp)) return alert('البصمة غير صحيحة');
   const c = document.getElementById('custom').value;
@@ -52,7 +57,7 @@ async function gen(){
   const data = {prod:'GHANDI-CENTRAL',fp,exp,shop,plan:'full',iat:new Date().toISOString().slice(0,10)};
   const p = utf8b64u(JSON.stringify(data));
   try{
-    const der = Uint8Array.from(atob(PRIV_B64), ch=>ch.charCodeAt(0));
+    const der = Uint8Array.from(atob(KEY_B64), ch=>ch.charCodeAt(0));
     const key = await crypto.subtle.importKey('pkcs8', der, {name:'Ed25519'}, false, ['sign']);
     const sig = await crypto.subtle.sign({name:'Ed25519'}, key, new TextEncoder().encode('GC1.'+p));
     const lic = 'GC1.'+p+'.'+b64u(sig);

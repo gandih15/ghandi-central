@@ -136,3 +136,12 @@ table.t tfoot td{font-weight:700;background:var(--panel2)}
 .pattern span.on{background:var(--pri);color:#fff;border-color:var(--pri)}
 ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#94a3b866;border-radius:9px}
 @media (max-width:1200px){.g6{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(2,1fr)}.pos{grid-template-columns:1fr 340px}}
+/* أشرطة الليمت */
+.lbars{display:flex;flex-direction:column;gap:6px;margin-top:6px;text-align:right}
+.lbars.cmp{gap:3px}
+.lbar .lt{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);gap:6px}
+.lbars.cmp .lt{font-size:10.5px}
+.lbar .lb{height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+.lbars.cmp .lb{height:5px}
+.lbar .lb i{display:block;height:100%;background:var(--ok);border-radius:6px}
+.lbar .lb i.hot{background:var(--warn)}.lbar .lb i.full{background:var(--bad)}

@@ -110,6 +110,6 @@ Pages.about = el => {
   <p class="muted">الإصدار ${esc(INFO.version)} — يعمل بدون إنترنت</p>
   <div class="alert pri" style="justify-content:center;font-size:16px">برمجة وتطوير: <b>${DEV.name}</b> — <b class="ltr">${DEV.phone}</b></div>
   <div class="grid g2" style="text-align:right"><div class="card"><h3>🔑 الترخيص</h3><div>البصمة: <b class="ltr">${esc(INFO.fingerprint)}</b></div><div>الحالة: ${LIC.ok ? '<span class="tag ok">مفعل</span>' : '<span class="tag bad">غير مفعل</span>'}</div><div>الانتهاء: ${LIC.ok ? (LIC.data.exp === 'LIFE' ? 'مدى الحياة' : fmtDate(LIC.data.exp)) : '-'}</div></div>
-  <div class="card"><h3>⌨️ اختصارات</h3><div>F1 نقطة البيع — F2 البحث في البيع</div><div>F3 الصيانة — F4 كاش ورصيد</div><div>F6 الأصناف — F7 العملاء — F8 التقارير</div><div>F9 الدفع — Esc إغلاق النافذة</div></div></div>
+  <div class="card"><h3>⌨️ اختصارات</h3><div>F1 نقطة البيع — F2 البحث في البيع</div><div>F3 الصيانة — F4 كاش ورصيد — F5 الليمت</div><div>F6 الأصناف — F7 العملاء — F8 التقارير</div><div>F9 الدفع — Esc إغلاق النافذة</div></div></div>
   <div class="row mt" style="justify-content:center"><button class="btn ok" onclick="waLink('${DEV.phone}','استفسار بخصوص نظام غاندي للسنترالات — ${esc(DB.settings.shopName)}')">💬 تواصل مع المطور</button></div></div>`;
 };
